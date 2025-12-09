@@ -7,11 +7,17 @@ uint8_t second_buffers[50];
 //* 用户输入的次数,用于判断是第一次还是第二次输入密码
 uint8_t send_flag = 1;
 
+//* 输入的是谁的密码,用于区分管理员和普通用户
+uint8_t user_type = 0; // 0-管理员 1-普通用户
+
 //* 添加管理员用户
 static void App_IO_AddAdmin(void);
 
 //* 重置缓冲数组
 static void App_IO_ResetBuffers(void);
+
+//* 用户输入密码
+static void App_IO_UserInputPassword(void);
 
 //* 模块初始化
 void App_IO_Init(void)
@@ -71,14 +77,194 @@ Com_Status App_IO_GetUserInputContent(uint8_t buffers[])
     }
 }
 
+//* 处理用户输入数据
 void App_IO_Handler(uint8_t receive_buffers[])
 {
+    uint8_t length = strlen((char *)receive_buffers);
+
+    if (length < 2)
+    {
+        //* 非法操作
+        sayWithoutInt();
+        sayIllegalOperation();
+    }
+    else if (length == 2)
+    {
+        //* 判断命令
+        if (receive_buffers[0] == '0' && receive_buffers[1] == '0')
+        {
+            //* 00 -- 添加管理员
+            user_type = 0;
+            App_IO_AddAdmin();
+        }
+        else if (receive_buffers[0] == '0' && receive_buffers[1] == '1')
+        {
+            //* 01 -- 删除管理员
+            printf("delete admin\r\n");
+        }
+        else if (receive_buffers[0] == '1' && receive_buffers[1] == '0')
+        {
+            //* 10 -- 添加普通用户
+            user_type = 1;
+            printf("add user\r\n");
+        }
+        else if (receive_buffers[0] == '1' && receive_buffers[1] == '1')
+        {
+            //* 11 -- 删除普通用户
+            printf("delete user\r\n");
+        }
+        else if (receive_buffers[0] == '2' && receive_buffers[1] == '2')
+        {
+            //* 22 -- 删除所有用户
+            esp_err_t result = Dri_NVS_DelAll();
+            if (result == ESP_OK)
+            {
+                //* 删除成功
+                sayWithoutInt();
+                sayDelSucc();
+            }
+            else
+            {
+                //* 删除失败
+                sayWithoutInt();
+                sayDelFail();
+            }
+        }
+    }
+    else
+    {
+        //* 剩余情况判断密码是否输入正确,决定是否开门
+    }
 }
 
+//* 添加管理员
 void App_IO_AddAdmin(void)
 {
+    //* 先判断是否已有管理员
+    if (Dri_NVS_KeyIsExist(ADMIN) == ESP_OK)
+    {
+        //* 提示已有管理员
+        sayWithoutInt();
+        sayAdminFull();
+    }
+    else
+    {
+        //* 没有管理员
+        sayWithoutInt();
+        sayInputAdminPassword();
+        App_IO_UserInputPassword();
+    }
 }
 
 void App_IO_ResetBuffers(void)
 {
+    memset(first_buffers, 0, 50);
+    memset(second_buffers, 0, 50);
+}
+
+void App_IO_UserInputPassword(void)
+{
+    Com_Status status;
+    if (send_flag == 1)
+    {
+        //* 第一次获取输入密码
+        status = App_IO_GetUserInputContent(first_buffers);
+        send_flag = 2;
+    }
+    else
+    {
+        //* 第二次获取输入密码
+        status = App_IO_GetUserInputContent(second_buffers);
+        send_flag = 1;
+    }
+
+    switch (status)
+    {
+    case ESP_OK:
+        if (send_flag == 2)
+        {
+            //* 第一次输入密码成功
+            //* 语音提示再次输入密码
+            if (user_type == 0)
+            {
+                //* 管理员
+                sayWithoutInt();
+                sayInputAdminPasswordAgain();
+            }
+            else
+            {
+                //* 普通用户
+                sayWithoutInt();
+                sayInputUserPasswordAgain();
+            }
+            App_IO_UserInputPassword();
+        }
+        else
+        {
+            //* 第二次输入密码成功
+            //* 比较两次输入密码是否一致
+            if (strcmp((char *)first_buffers, (char *)second_buffers) == 0)
+            {
+                //* 两次密码输入一致,可以写入flash
+                if (user_type == 0)
+                {
+                    //* 写入管理员密码
+                    esp_err_t err = Dri_NVS_SetStr(ADMIN, (char *)first_buffers);
+                    if (err == ESP_OK)
+                    {
+                        //* 写入成功
+                        sayWithoutInt();
+                        sayAddAdmin();
+                        sayWithoutInt();
+                        sayAddSucc();
+                    }
+                    else
+                    {
+                        //* 写入失败
+                        sayWithoutInt();
+                        sayAddAdmin();
+                        sayWithoutInt();
+                        sayAddFail();
+                    }
+                }
+                else
+                {
+                    //* 写入普通用户密码
+                    esp_err_t err = Dri_NVS_SetU8((char *)first_buffers, 0);
+                    if (err == ESP_OK)
+                    {
+                        //* 写入成功
+                        sayWithoutInt();
+                        sayAddUser();
+                        sayWithoutInt();
+                        sayAddSucc();
+                    }
+                    else
+                    {
+                        //* 写入失败
+                        sayWithoutInt();
+                        sayAddUser();
+                        sayWithoutInt();
+                        sayAddFail();
+                    }
+                }
+            }
+        }
+        break;
+    case Com_ERROR:
+        //* 非法操作
+        sayWithoutInt();
+        sayIllegalOperation();
+        break;
+    case Com_TIMEOUT:
+        //* 提示超时,请重试
+        sayWithoutInt();
+        sayRetry();
+        break;
+    default:
+        break;
+    }
+
+    //* 清空缓冲数组
+    App_IO_ResetBuffers();
 }

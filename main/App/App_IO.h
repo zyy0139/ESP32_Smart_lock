@@ -6,6 +6,9 @@
 #include "Int_WTN6170.h"
 #include "Dri_NVS.h"
 #include "Com_Config.h"
+#include <string.h>
+
+#define ADMIN "ADMIN"
 
 void App_IO_Init(void);
 
