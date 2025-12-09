@@ -1,26 +1,51 @@
 #include <stdio.h>
 #include "esp_task.h"
-#include "rom/ets_sys.h"
-#include "Dri_NVS.h"
+#include "App_IO.h"
+#include "Com_Config.h"
+#include <string.h>
+
+//* 按键任务相关
+TaskHandle_t SC12B_Task_Handle;
+void sc12b_handle(void *param);
 
 void app_main(void)
 {
-    //* flash测试
+    //* 模块初始化
+    App_IO_Init();
 
-    //* 初始化
-    Dri_NVS_Init();
+    //* 创建任务
+    xTaskCreate(sc12b_handle, "sc12b_handle", 4096, NULL, 4, &SC12B_Task_Handle);
+}
 
-    //* 存入管理员密码
-    Dri_NVS_SetStr("ADMIN", "123456");
+void sc12b_handle(void *param)
+{
+    uint8_t receive_info_buffers[50] = {0};
 
-    char buffers[10] = {0};
-    size_t len = sizeof(buffers);
-
-    //* 获取管理员密码
-    esp_err_t result = Dri_NVS_GetStr("ADMIN", buffers, &len);
-
-    if (result == ESP_OK)
+    while (1)
     {
-        printf("admin ok : %s\r\n", buffers);
+        Com_Status status = App_IO_GetUserInputContent(receive_info_buffers);
+        switch (status)
+        {
+        case Com_ERROR:
+            //* 输入M语音提示
+            sayWithoutInt();
+            sayIllegalOperation();
+            break;
+        case Com_OK:
+            //* 获取用户输入内容,并处理
+            App_IO_Handler(receive_info_buffers);
+            break;
+        case Com_TIMEOUT:
+            //* 超时处理
+            //* 关闭所有led
+            Int_WS2818_LED_Off_All();
+            break;
+        default:
+            break;
+        }
+
+        //* 清除缓冲数组
+        memset(receive_info_buffers, 0, 50);
+        vTaskDelay(50);
     }
 }
