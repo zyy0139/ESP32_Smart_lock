@@ -19,6 +19,9 @@ static void App_IO_DelAdmin(void);
 //* 验证管理员身份
 static Com_Status App_IO_CheckAdmin(void);
 
+//* 添加普通用户
+static void App_IO_AddUser(void);
+
 //* 重置缓冲数组
 static void App_IO_ResetBuffers(void);
 
@@ -112,7 +115,7 @@ void App_IO_Handler(uint8_t receive_buffers[])
         {
             //* 10 -- 添加普通用户
             user_type = 1;
-            printf("add user\r\n");
+            App_IO_AddUser();
         }
         else if (receive_buffers[0] == '1' && receive_buffers[1] == '1')
         {
@@ -162,6 +165,7 @@ void App_IO_AddAdmin(void)
     }
 }
 
+//* 删除管理员
 void App_IO_DelAdmin(void)
 {
     //* 先判断是否有管理员
@@ -204,6 +208,7 @@ void App_IO_DelAdmin(void)
     }
 }
 
+//* 验证管理员身份
 Com_Status App_IO_CheckAdmin(void)
 {
     //* 提示输入管理员密码
@@ -243,6 +248,39 @@ Com_Status App_IO_CheckAdmin(void)
         break;
     }
     return Com_ERROR;
+}
+
+//* 添加普通用户
+void App_IO_AddUser(void)
+{
+    //* 先判断是否有管理员信息
+    if (Dri_NVS_KeyIsExist(ADMIN) != ESP_OK)
+    {
+        //* 管理员不存在
+        sayWithoutInt();
+        sayIllegalOperation();
+    }
+    else
+    {
+        //* 管理员存在
+        //* 验证管理员身份
+        Com_Status status = App_IO_CheckAdmin();
+        if (status == Com_OK)
+        {
+            //* 验证通过
+            //* 提示输入用户密码
+            sayWithoutInt();
+            sayInputUserPassword();
+            send_flag = 1;
+            App_IO_UserInputPassword();
+        }
+        else
+        {
+            //* 验证不通过,请重试
+            sayWithoutInt();
+            sayRetry();
+        }
+    }
 }
 
 void App_IO_ResetBuffers(void)
@@ -318,23 +356,33 @@ void App_IO_UserInputPassword(void)
                 }
                 else
                 {
-                    //* 写入普通用户密码
-                    esp_err_t err = Dri_NVS_SetU8((char *)first_buffers, 0);
-                    if (err == ESP_OK)
+                    //* 先判断这个密码是否存在
+                    if (Dri_NVS_KeyIsExist((char *)first_buffers) == ESP_OK)
                     {
-                        //* 写入成功
+                        //* 密码已存在,无法再次添加
                         sayWithoutInt();
-                        sayAddUser();
-                        sayWithoutInt();
-                        sayAddSucc();
+                        sayAddFail();
                     }
                     else
                     {
-                        //* 写入失败
-                        sayWithoutInt();
-                        sayAddUser();
-                        sayWithoutInt();
-                        sayAddFail();
+                        //* 不存在,可以写入
+                        esp_err_t err = Dri_NVS_SetU8((char *)first_buffers, 0);
+                        if (err == ESP_OK)
+                        {
+                            //* 写入成功
+                            sayWithoutInt();
+                            sayAddUser();
+                            sayWithoutInt();
+                            sayAddSucc();
+                        }
+                        else
+                        {
+                            //* 写入失败
+                            sayWithoutInt();
+                            sayAddUser();
+                            sayWithoutInt();
+                            sayAddFail();
+                        }
                     }
                 }
             }
