@@ -22,6 +22,9 @@ static Com_Status App_IO_CheckAdmin(void);
 //* 添加普通用户
 static void App_IO_AddUser(void);
 
+//* 删除普通用户
+static void App_IO_DelUser(void);
+
 //* 重置缓冲数组
 static void App_IO_ResetBuffers(void);
 
@@ -120,7 +123,7 @@ void App_IO_Handler(uint8_t receive_buffers[])
         else if (receive_buffers[0] == '1' && receive_buffers[1] == '1')
         {
             //* 11 -- 删除普通用户
-            printf("delete user\r\n");
+            App_IO_DelUser();
         }
         else if (receive_buffers[0] == '2' && receive_buffers[1] == '2')
         {
@@ -278,6 +281,67 @@ void App_IO_AddUser(void)
         else
         {
             //* 验证不通过,请重试
+            sayWithoutInt();
+            sayRetry();
+        }
+    }
+}
+
+//* 删除普通用户
+void App_IO_DelUser(void)
+{
+    //* 先判断是否有管理员信息
+    if (Dri_NVS_KeyIsExist(ADMIN) != ESP_OK)
+    {
+        //* 管理员不存在
+        sayWithoutInt();
+        sayIllegalOperation();
+    }
+    else
+    {
+        //* 管理员存在
+        //* 验证管理员身份
+        Com_Status status = App_IO_CheckAdmin();
+        if (status == Com_OK)
+        {
+            //* 验证通过
+            //* 提示输入用户密码
+            sayWithoutInt();
+            sayInputUserPassword();
+
+            //* 接收用户输入的密码
+            status = App_IO_GetUserInputContent(first_buffers);
+            if (status == Com_OK)
+            {
+                //* 删除用户密码
+                esp_err_t res = Dri_NVS_DelByKey((char *)first_buffers);
+                if (res == ESP_OK)
+                {
+                    //* 删除成功
+                    sayWithoutInt();
+                    sayDelUser();
+                    sayWithoutInt();
+                    sayDelSucc();
+                }
+                else
+                {
+                    //* 删除失败
+                    sayWithoutInt();
+                    sayDelUser();
+                    sayWithoutInt();
+                    sayDelFail();
+                }
+            }
+            else
+            {
+                //* 接收用户密码失败,请重试
+                sayWithoutInt();
+                sayRetry();
+            }
+        }
+        else
+        {
+            //* 验证管理员失败,请重试
             sayWithoutInt();
             sayRetry();
         }
