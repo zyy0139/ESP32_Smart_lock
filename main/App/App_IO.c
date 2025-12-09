@@ -161,6 +161,7 @@ void App_IO_AddAdmin(void)
         //* 没有管理员
         sayWithoutInt();
         sayInputAdminPassword();
+        send_flag = 1;
         App_IO_UserInputPassword();
     }
 }
