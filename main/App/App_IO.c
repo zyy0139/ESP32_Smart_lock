@@ -31,6 +31,9 @@ static void App_IO_ResetBuffers(void);
 //* 用户输入密码
 static void App_IO_UserInputPassword(void);
 
+//* 密码开门
+static void App_IO_OpenDoor(uint8_t openInfo[]);
+
 //* 模块初始化
 void App_IO_Init(void)
 {
@@ -146,6 +149,7 @@ void App_IO_Handler(uint8_t receive_buffers[])
     else
     {
         //* 剩余情况判断密码是否输入正确,决定是否开门
+        App_IO_OpenDoor(receive_buffers);
     }
 }
 
@@ -469,4 +473,31 @@ void App_IO_UserInputPassword(void)
 
     //* 清空缓冲数组
     App_IO_ResetBuffers();
+}
+
+//* 密码开门
+void App_IO_OpenDoor(uint8_t openInfo[])
+{
+    //* 获取管理员密码
+    char admin_password_buffer[10];
+    size_t sizes = 10;
+    Dri_NVS_GetStr(ADMIN,admin_password_buffer,&sizes);
+
+    if(Dri_NVS_KeyIsExist((char *)openInfo) == ESP_OK || strcmp(admin_password_buffer,(char *)openInfo) == 0)
+    {
+        sayWithoutInt();
+        sayDoorOpen();
+
+        //* 开门
+        Int_BDR6120_OpenDoor();
+
+        sayWithoutInt();
+        sayDoorClose();
+    }
+    else
+    {
+        //* 报警
+        sayWithoutInt();
+        sayAlarm();
+    }
 }
