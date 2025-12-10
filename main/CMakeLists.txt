@@ -5,6 +5,7 @@ idf_component_register(
         "./Int/Int_WTN6170.c"
         "./Int/Int_SC12B.c"
         "./Int/Int_WS2812.c"
+        "./Int/Int_FPM383.c"
         "./Dri/Dri_NVS.c"
         "./App/App_IO.c"
     INCLUDE_DIRS 
