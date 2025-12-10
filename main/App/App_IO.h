@@ -10,6 +10,8 @@
 
 #define ADMIN "ADMIN"
 
+#define PW_ERR_NUM 3
+
 void App_IO_Init(void);
 
 Com_Status App_IO_GetUserInputContent(uint8_t buffers[]);

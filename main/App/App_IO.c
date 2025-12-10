@@ -10,6 +10,9 @@ uint8_t send_flag = 1;
 //* 输入的是谁的密码,用于区分管理员和普通用户
 uint8_t user_type = 0; // 0-管理员 1-普通用户
 
+//* 记录用户输入错误密码次数
+uint8_t user_err_num = 0;
+
 //* 添加管理员用户
 static void App_IO_AddAdmin(void);
 
@@ -481,9 +484,9 @@ void App_IO_OpenDoor(uint8_t openInfo[])
     //* 获取管理员密码
     char admin_password_buffer[10];
     size_t sizes = 10;
-    Dri_NVS_GetStr(ADMIN,admin_password_buffer,&sizes);
+    Dri_NVS_GetStr(ADMIN, admin_password_buffer, &sizes);
 
-    if(Dri_NVS_KeyIsExist((char *)openInfo) == ESP_OK || strcmp(admin_password_buffer,(char *)openInfo) == 0)
+    if (Dri_NVS_KeyIsExist((char *)openInfo) == ESP_OK || strcmp(admin_password_buffer, (char *)openInfo) == 0)
     {
         sayWithoutInt();
         sayDoorOpen();
@@ -493,11 +496,25 @@ void App_IO_OpenDoor(uint8_t openInfo[])
 
         sayWithoutInt();
         sayDoorClose();
+
+        // 重置错误次数
+        user_err_num = 0;
     }
     else
     {
-        //* 报警
-        sayWithoutInt();
-        sayAlarm();
+
+        if (user_err_num >= PW_ERR_NUM)
+        {
+            //* 报警
+            sayWithoutInt();
+            sayAlarm();
+        }
+        else
+        {
+            //* 输出错误,请重试
+            user_err_num++;
+            sayWithoutInt();
+            sayPasswordVerifyFail();
+        }
     }
 }
