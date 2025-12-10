@@ -13,4 +13,6 @@ void Int_FPM383_Init(void);
 
 void Int_FPM383_Sleep(void);
 
+void Int_FPM383_GetChipID(void);
+
 #endif /* __INT_FPM383_H__ */

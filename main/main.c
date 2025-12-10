@@ -2,6 +2,7 @@
 #include "esp_task.h"
 #include "App_IO.h"
 #include "Com_Config.h"
+#include "Int_FPM383.h"
 #include <string.h>
 
 //* 按键任务相关
@@ -12,6 +13,11 @@ void app_main(void)
 {
     //* 模块初始化
     App_IO_Init();
+
+    //* FPM383模块测试
+    Int_FPM383_Init();
+    Int_FPM383_GetChipID();
+    Int_FPM383_Sleep();
 
     //* 创建任务
     xTaskCreate(sc12b_handle, "sc12b_handle", 4096, NULL, 4, &SC12B_Task_Handle);

@@ -119,3 +119,34 @@ void Int_FPM383_Sleep(void)
 
     esp_rom_printf("fpm383 sleep!\r\n");
 }
+
+//* 获取芯片序列号 -- 测试
+void Int_FPM383_GetChipID(void)
+{
+    //* 定义命令数组
+    uint8_t cmds[13] = {
+        0xEF, 0x01,             // 包头
+        0xff, 0xff, 0xff, 0xff, // 设备地址
+        0x01,                   // 包标识
+        0x00, 0x04,             // 包长度
+        0x34,                   // 指令码
+        0x00,                   // 参数
+        0x00, 0x39              // 校验和
+    };
+
+    //* 发送命令
+    Int_FPM383_SendCmd(cmds,13);
+    //* 接收应答数据
+    Int_FPM383_ReceiveAck(44,2000);
+
+    if(receive_buffers[9] == 0x00)
+    {
+        //* 获取成功
+        esp_rom_printf("%.32s\r\n",&receive_buffers[10]);
+    }
+    else
+    {
+        //* 获取失败
+        esp_rom_printf("GetChipID ERROR\r\n");
+    }
+}
