@@ -17,7 +17,6 @@ void app_main(void)
 {
     //* 模块初始化
     App_IO_Init();
-    Int_FPM383_Init();
 
     //* 创建任务
     xTaskCreate(sc12b_handle, "sc12b_handle", 4096, NULL, 4, &SC12B_Task_Handle);
@@ -59,6 +58,9 @@ void sc12b_handle(void *param)
 
 void finger_handle(void *param)
 {
-    App_IO_FingerHandler();
-    vTaskDelay(50);
+    while (1)
+    {
+        App_IO_FingerHandler();
+        vTaskDelay(50);
+    }
 }
