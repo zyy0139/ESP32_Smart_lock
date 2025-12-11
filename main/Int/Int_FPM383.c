@@ -135,18 +135,164 @@ void Int_FPM383_GetChipID(void)
     };
 
     //* 发送命令
-    Int_FPM383_SendCmd(cmds,13);
+    Int_FPM383_SendCmd(cmds, 13);
     //* 接收应答数据
-    Int_FPM383_ReceiveAck(44,2000);
+    Int_FPM383_ReceiveAck(44, 2000);
 
-    if(receive_buffers[9] == 0x00)
+    if (receive_buffers[9] == 0x00)
     {
         //* 获取成功
-        esp_rom_printf("%.32s\r\n",&receive_buffers[10]);
+        esp_rom_printf("%.32s\r\n", &receive_buffers[10]);
     }
     else
     {
         //* 获取失败
         esp_rom_printf("GetChipID ERROR\r\n");
     }
+}
+
+//* 获取最近空闲索引表页码
+uint16_t Int_FPM383_GetMinID(void)
+{
+    //* 编写命令
+    uint8_t cmds[13] = {
+        0xEF, 0x01,             // 包头
+        0xff, 0xff, 0xff, 0xff, // 设备地址
+        0x01,                   // 包标识
+        0x00, 0x04,             // 包长度
+        0x1f,                   // 指令码
+        0x00,                   // 页码
+        '\0', '\0'              // 校验和
+    };
+
+    //* 计算校验和
+    Int_FPM383_CheckSum(cmds, 13);
+
+    //* 发送命令
+    Int_FPM383_SendCmd(cmds, 13);
+
+    //* 接收应答
+    Int_FPM383_ReceiveAck(44, 2000);
+
+    //* 判断确认码
+    if (receive_buffers[9] == 0x00)
+    {
+        //* 获取应答中的索引信息
+        for (uint8_t i = 0; i < 32; i++)
+        {
+            uint8_t byte = receive_buffers[i + 10]; // 索引信息长32字节,从数组第11位开始
+            for (uint8_t j = 0; j < 8; j++)
+            {
+                if (((byte >> j) & 0x01) == 0)
+                {
+                    return 8 * i + j;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+//* 录入指纹
+Com_Status Int_FPM383_RegisterFinger(uint16_t minID)
+{
+    //* 编写命令
+    /*
+        参数：最低位为bit0。
+        1) bit0：采图背光灯控制位，0-LED长亮，1-LED获取图像成功后灭； -- 1
+        2) bit1：采图预处理控制位，0-关闭预处理，1-打开预处理； -- 1
+        3) bit2：注册过程中，是否要求模组在关键步骤，返回当前状态，0-要求返回，1-不
+        要求返回；-- 0
+        4) bit3：是否允许覆盖ID号，0-不允许，1-允许； -- 0
+        5) bit4：允许指纹重复注册控制位，0-允许，1-不允许；-- 1
+        6) bit5：注册时，多次指纹采集过程中，是否要求手指离开才能进入下一次指纹图
+        像采集，0-要求离开；1-不要求离开；-- 1
+        7) bit6~bit15：预留。 -- 0
+    */
+    uint8_t cmds[17] = {
+        0xEF, 0x01,             // 包头
+        0xff, 0xff, 0xff, 0xff, // 设备地址
+        0x01,                   // 包标识
+        0x00, 0x08,             // 包长度
+        0x31,                   // 指令码
+        '\0', '\0',             // ID号
+        0x01,                   // 录入次数
+        0x00, 0x33,             // 参数
+        '\0', '\0'              // 校验和
+    };
+
+    //* 注入ID
+    cmds[10] = (minID >> 8) & 0xff;
+    cmds[11] = (minID >> 0) & 0xff;
+
+    //* 注入校验和
+    Int_FPM383_CheckSum(cmds, 17);
+
+    //! 由于硬件需求,在注册指纹之前,需要取消注册四次
+    Int_FPM383_Cancel();
+    Int_FPM383_Cancel();
+    Int_FPM383_Cancel();
+    Int_FPM383_Cancel();
+
+    //* 发送注册命令
+    Int_FPM383_SendCmd(cmds, 17);
+
+    //* 接收应答数据
+    do
+    {
+        Int_FPM383_ReceiveAck(14, 1000);
+        if (receive_buffers[9] != 0x00)
+        {
+            return Com_ERROR;
+        }
+    } while (receive_buffers[10] != 0x06);
+
+    //* 指纹注册成功
+    return Com_OK;
+}
+
+//* 取消录入
+void Int_FPM383_Cancel(void)
+{
+    //* 编写命令
+    uint8_t cmds[12] = {
+        0xEF, 0x01,             // 包头
+        0xff, 0xff, 0xff, 0xff, // 设备地址
+        0x01,                   // 包标识
+        0x00, 0x03,             // 包长度
+        0x30,                   // 指令码
+        '\0', '\0'              // 校验和
+    };
+
+    //* 计算校验和
+    Int_FPM383_CheckSum(cmds, 12);
+
+    //* 循环发送命令,直到取消录入成功
+    do
+    {
+        Int_FPM383_SendCmd(cmds, 12);
+        Int_FPM383_ReceiveAck(12, 1000);
+        esp_rom_printf("FPM383 Cancel....\r\n");
+    } while (receive_buffers[9] != 0x00);
+
+    //* 取消成功
+    esp_rom_printf("FPM383 Cancel OK\r\n");
+}
+
+//* 验证指纹
+Com_Status Int_FPM383_VertyFinger(void)
+{
+    return Com_OK;
+}
+
+//* 删除单个指纹信息
+Com_Status Int_FPM383_DelFinger(int8_t fingerID)
+{
+    return Com_OK;
+}
+
+//* 删除所有指纹信息
+Com_Status Int_FPM383_DelAllFinger(void)
+{
+    return Com_OK;
 }
