@@ -1,35 +1,51 @@
-| Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C5 | ESP32-C6 | ESP32-H2 | ESP32-P4 | ESP32-S2 | ESP32-S3 |
-| ----------------- | ----- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- |
+# 基于 ESP32-C3 的智能门锁
 
-# _Sample project_
+## 项目概述
 
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+本项目是实现一款**智能门锁**中的智能控制部分, 可以应用在家庭, 办公室等任何使用门锁的场所。
 
-This is the simplest buildable example. The example is used by command `idf.py create-project`
-that copies the project to user specified path and set it's name. For more information follow the [docs page](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project)
+本项目实现了以下主要功能:
 
+- 通过按键配置密码
 
+- 通过按键输入密码开锁
 
-## How to use example
-We encourage the users to use the example as a template for the new projects.
-A recommended way is to follow the instructions on a [docs page](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project).
+- 录入指纹
 
-## Example folder contents
+- 通过录入的指纹开锁
 
-The project **sample_project** contains one source file in C language [main.c](main/main.c). The file is located in folder [main](main).
+- 通过蓝牙配置密码
 
-ESP-IDF projects are built using CMake. The project build configuration is contained in `CMakeLists.txt`
-files that provide set of directives and instructions describing the project's source files and targets
-(executable, library, or both). 
+- 语音播报模块
 
-Below is short explanation of remaining files in the project folder.
+- 通过蓝牙输入密码开锁
 
-```
-├── CMakeLists.txt
-├── main
-│   ├── CMakeLists.txt
-│   └── main.c
-└── README.md                  This is the file you are currently reading
-```
-Additionally, the sample project contains Makefile and component.mk files, used for the legacy Make based build system. 
-They are not used or needed when building with CMake and idf.py.
+- 通过 WIFI 实现 OTA 在线升级
+
+## 功能描述
+
+智能门锁使用的主控芯片为 ESP32-C3, 其他功能模块包括:
+
+- 电容触摸按键：一共提供 12 个电容触摸按键, 分别为数字 0-9, M 和#
+
+- 单总线全彩 LED：分别为每个电容触摸按键提供了一个单总线全彩 LED, 当按键被按下时可以进行灯光提示；
+
+- 指纹模块：指纹模块可以采集指纹
+
+- 蓝牙模块：由 esp32-c3 芯片提供. 用来接收用户手机蓝牙传来的密码, 匹配成功之后,执行开锁动作。
+
+- 语音播报模块：当用户执行了一些操作之后, 给用户进行相应的语音播报提。
+- WIFI 模块：由 esp32-c3 芯片提供. 用来进行 OTA 下载最新固件,实现在线固件升级
+
+- 电机：使用 esp32 的 GPIO 来控制电机的转动,达到开锁的目的
+
+## 硬件需求
+
+- 主控芯片：**ESP32-C3**
+- 电机模块：**BDR6120S**
+- 按键模块：**SC12B**
+- 单总线全彩 LED： **WS2812B**
+- 指纹采集模块：**HLK-FPM383F**
+- 语音模块：**WTN6**
+- 蓝牙模块：ESP 芯片内置
+- WIFI 模块：ESP 芯片内置
