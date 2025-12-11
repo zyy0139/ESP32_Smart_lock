@@ -282,7 +282,44 @@ void Int_FPM383_Cancel(void)
 //* 验证指纹
 Com_Status Int_FPM383_VertyFinger(void)
 {
-    return Com_OK;
+    //* 编写命令
+    /*
+        参数：最低位为 bit0。
+        1) bit0：采图背光灯控制位，0-LED 长亮，1-LED 获取图像成功后灭； -- 1
+        2) bit1：采图预处理控制位，0-关闭预处理，1-打开预处理； -- 1
+        3) bit2：注册过程中，是否要求模组在关键步骤，返回当前状态，0-要求返回，1-不要求
+        返回； -- 1
+        4) bit3~bit15：预留。 -- 0
+    */
+    uint8_t cmds[17] = {
+        0xEF, 0x01,             // 包头
+        0xff, 0xff, 0xff, 0xff, // 设备地址
+        0x01,                   // 包标识
+        0x00, 0x08,             // 包长度
+        0x32,                   // 指令码
+        0x03,                   // 分数等级(灵敏度)
+        0xff, 0xff,             // ID号 -- 这样写代表会与指纹库一一对比
+        0x00, 0x07,             // 参数
+        '\0', '\0'              // 校验和
+    };
+
+    //* 计算校验和
+    Int_FPM383_CheckSum(cmds,17);
+
+    //* 发送命令
+    Int_FPM383_SendCmd(cmds,17);
+
+    //* 接收响应
+    Int_FPM383_ReceiveAck(17,2000);
+
+    if(receive_buffers[9] == 0x00)
+    {
+        return Com_OK;
+    }
+    else
+    {
+        return Com_ERROR;
+    }
 }
 
 //* 删除单个指纹信息
