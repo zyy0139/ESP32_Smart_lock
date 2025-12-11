@@ -9,18 +9,19 @@
 TaskHandle_t SC12B_Task_Handle;
 void sc12b_handle(void *param);
 
+//* 指纹任务相关
+TaskHandle_t Finger_Task_Handle;
+void finger_handle(void *param);
+
 void app_main(void)
 {
     //* 模块初始化
     App_IO_Init();
-
-    //* FPM383模块测试
     Int_FPM383_Init();
-    Int_FPM383_GetChipID();
-    Int_FPM383_Sleep();
 
     //* 创建任务
     xTaskCreate(sc12b_handle, "sc12b_handle", 4096, NULL, 4, &SC12B_Task_Handle);
+    xTaskCreate(finger_handle, "finger_handle", 4096, NULL, 4, &Finger_Task_Handle);
 }
 
 void sc12b_handle(void *param)
@@ -54,4 +55,10 @@ void sc12b_handle(void *param)
         memset(receive_info_buffers, 0, 50);
         vTaskDelay(50);
     }
+}
+
+void finger_handle(void *param)
+{
+    App_IO_FingerHandler();
+    vTaskDelay(50);
 }
