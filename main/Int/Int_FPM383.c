@@ -304,15 +304,15 @@ Com_Status Int_FPM383_VertyFinger(void)
     };
 
     //* 计算校验和
-    Int_FPM383_CheckSum(cmds,17);
+    Int_FPM383_CheckSum(cmds, 17);
 
     //* 发送命令
-    Int_FPM383_SendCmd(cmds,17);
+    Int_FPM383_SendCmd(cmds, 17);
 
     //* 接收响应
-    Int_FPM383_ReceiveAck(17,2000);
+    Int_FPM383_ReceiveAck(17, 2000);
 
-    if(receive_buffers[9] == 0x00)
+    if (receive_buffers[9] == 0x00)
     {
         return Com_OK;
     }
@@ -322,14 +322,97 @@ Com_Status Int_FPM383_VertyFinger(void)
     }
 }
 
+//* 获取要删除的指纹ID
+int8_t Int_FPM383_GetDelFingerID(void)
+{
+    uint8_t cmds[17] = {
+        0xEF, 0x01,             // 包头
+        0xff, 0xff, 0xff, 0xff, // 设备地址
+        0x01,                   // 包标识
+        0x00, 0x08,             // 包长度
+        0x32,                   // 指令码
+        0x03,                   // 分数等级(灵敏度)
+        0xff, 0xff,             // ID号 -- 这样写代表会与指纹库一一对比
+        0x00, 0x07,             // 参数
+        '\0', '\0'              // 校验和
+    };
+
+    //* 计算校验和
+    Int_FPM383_CheckSum(cmds, 17);
+
+    //* 发送命令
+    Int_FPM383_SendCmd(cmds, 17);
+
+    //* 接收响应
+    Int_FPM383_ReceiveAck(17, 2000);
+
+    if (receive_buffers[9] == 0x00)
+    {
+        return receive_buffers[12];
+    }
+    else
+    {
+        //* 表示指纹不存在
+        return -1;
+    }
+}
+
 //* 删除单个指纹信息
 Com_Status Int_FPM383_DelFinger(int8_t fingerID)
 {
-    return Com_OK;
+    uint8_t cmds[16] = {
+        0xEF, 0x01,             // 包头
+        0xff, 0xff, 0xff, 0xff, // 设备地址
+        0x01,                   // 包标识
+        0x00, 0x07,             // 包长度
+        0x0c,                   // 指令码
+        '\0', '\0',             // 页码
+        0x00, 0x01,             // 删除个数
+        '\0', '\0'              // 校验和
+    };
+
+    //* 注入页码
+    cmds[10] = (fingerID >> 8) & 0xff;
+    cmds[11] = (fingerID >> 0) & 0xff;
+
+    //* 计算校验和
+    Int_FPM383_CheckSum(cmds, 16);
+
+    Int_FPM383_SendCmd(cmds, 16);
+    Int_FPM383_ReceiveAck(12, 1000);
+
+    if (receive_buffers[9] == 0x00)
+    {
+        return Com_OK;
+    }
+    else
+    {
+        return Com_ERROR;
+    }
 }
 
 //* 删除所有指纹信息
 Com_Status Int_FPM383_DelAllFinger(void)
 {
-    return Com_OK;
+    uint8_t cmds[12] = {
+        0xEF, 0x01,             // 包头
+        0xff, 0xff, 0xff, 0xff, // 设备地址
+        0x01,                   // 包标识
+        0x00, 0x03,             // 包长度
+        0x0d,                   // 指令码
+        0x00, 0x11              // 校验和
+    };
+
+    Int_FPM383_SendCmd(cmds,12);
+
+    Int_FPM383_ReceiveAck(12,1000);
+
+    if(receive_buffers[9] == 0x00)
+    {
+        return Com_OK;
+    }
+    else
+    {
+        return Com_ERROR;
+    }
 }

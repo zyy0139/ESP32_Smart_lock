@@ -28,6 +28,9 @@ void Int_FPM383_Cancel(void);
 //* 验证指纹
 Com_Status Int_FPM383_VertyFinger(void);
 
+//* 获取要删除的指纹ID
+int8_t Int_FPM383_GetDelFingerID(void);
+
 //* 删除单个指纹信息
 Com_Status Int_FPM383_DelFinger(int8_t fingerID);
 
