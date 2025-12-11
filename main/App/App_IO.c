@@ -1,5 +1,8 @@
 #include "App_IO.h"
 
+//* 引入指纹任务句柄
+extern TaskHandle_t Finger_Task_Handle;
+
 //* 定义用户输入缓冲区
 uint8_t first_buffers[50];
 uint8_t second_buffers[50];
@@ -34,6 +37,9 @@ static void App_IO_ResetBuffers(void);
 //* 用户输入密码
 static void App_IO_UserInputPassword(void);
 
+//* 录入指纹
+static void App_IO_AddFinger(void);
+
 //* 密码开门
 static void App_IO_OpenDoor(uint8_t openInfo[]);
 
@@ -44,6 +50,7 @@ void App_IO_Init(void)
     Int_SC12B_Init();
     Int_WS2812_Init();
     Int_WTN6170_Init();
+    Int_FPM383_Init();
     Dri_NVS_Init();
 }
 
@@ -131,9 +138,9 @@ void App_IO_Handler(uint8_t receive_buffers[])
             //* 11 -- 删除普通用户
             App_IO_DelUser();
         }
-        else if (receive_buffers[0] == '2' && receive_buffers[1] == '2')
+        else if (receive_buffers[0] == '9' && receive_buffers[1] == '9')
         {
-            //* 22 -- 删除所有用户
+            //* 99 -- 删除所有用户
             esp_err_t result = Dri_NVS_DelAll();
             if (result == ESP_OK)
             {
@@ -147,6 +154,15 @@ void App_IO_Handler(uint8_t receive_buffers[])
                 sayWithoutInt();
                 sayDelFail();
             }
+        }
+        else if (receive_buffers[0] == '2' && receive_buffers[1] == '1')
+        {
+            //* 21 -- 录入指纹
+            App_IO_AddFinger();
+        }
+        else if (receive_buffers[0] == '2' && receive_buffers[1] == '2')
+        {
+            //* 22 -- 删除指纹
         }
     }
     else
@@ -476,6 +492,78 @@ void App_IO_UserInputPassword(void)
 
     //* 清空缓冲数组
     App_IO_ResetBuffers();
+}
+
+//* 添加指纹
+void App_IO_AddFinger(void)
+{
+    //* 验证管理员身份
+    Com_Status status = App_IO_CheckAdmin();
+    if (status == Com_OK)
+    {
+        //* 验证成功,开始录入
+        sayWithoutInt();
+        sayAddUserFingerprint();
+
+        //* 通知指纹任务
+        xTaskNotify(Finger_Task_Handle, (uint32_t)1, eSetValueWithOverwrite);
+    }
+    else
+    {
+        //* 验证失败,请重试
+        sayWithoutInt();
+        sayRetry();
+    }
+}
+
+//* 指纹处理
+void App_IO_FingerHandler(void)
+{
+    //* 定义变量,接收通知内容
+    uint32_t val = 0;
+
+    //* 等待接收通知
+    xTaskNotifyWait(UINT32_MAX, UINT32_MAX, &val, 0);
+
+    //* 根据通知内容进行操作
+    if(val !=0)
+    {
+        //* 发送命令前需关闭中断
+        gpio_intr_disable(FPM383_TOUCH_OUT);
+
+        //* 指纹录入或删除操作
+        if(val == 1)
+        {
+            //* 指纹录入
+
+            //* 语音提示
+            sayWithoutInt();
+            sayPlaceFinger();
+
+            //* 获取最小空闲页码
+            uint16_t minID = Int_FPM383_GetMinID();
+
+            //* 录入
+            Com_Status status = Int_FPM383_RegisterFinger(minID);
+            if(status == Com_OK)
+            {
+                //* 录入成功
+                sayWithoutInt();
+                sayFingerprintAddSucc();
+            }
+            else
+            {
+                //* 录入失败
+                sayWithoutInt();
+                sayFingerprintAddFail();
+            }
+        }
+    }
+    else
+    {
+        //* 指纹开门操作
+    }
+    Int_FPM383_Sleep();
 }
 
 //* 密码开门
