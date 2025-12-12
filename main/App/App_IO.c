@@ -43,6 +43,9 @@ static void App_IO_AddFinger(void);
 //* 密码开门
 static void App_IO_OpenDoor(uint8_t openInfo[]);
 
+//* 删除所有用户
+static void App_IO_DelAllUser(void);
+
 //* 模块初始化
 void App_IO_Init(void)
 {
@@ -141,19 +144,7 @@ void App_IO_Handler(uint8_t receive_buffers[])
         else if (receive_buffers[0] == '9' && receive_buffers[1] == '9')
         {
             //* 99 -- 删除所有用户
-            esp_err_t result = Dri_NVS_DelAll();
-            if (result == ESP_OK)
-            {
-                //* 删除成功
-                sayWithoutInt();
-                sayDelSucc();
-            }
-            else
-            {
-                //* 删除失败
-                sayWithoutInt();
-                sayDelFail();
-            }
+            App_IO_DelAllUser();
         }
         else if (receive_buffers[0] == '2' && receive_buffers[1] == '1')
         {
@@ -526,13 +517,13 @@ void App_IO_FingerHandler(void)
     xTaskNotifyWait(UINT32_MAX, UINT32_MAX, &val, 0);
 
     //* 根据通知内容进行操作
-    if(val !=0)
+    if (val != 0)
     {
         //* 发送命令前需关闭中断
         gpio_intr_disable(FPM383_TOUCH_OUT);
 
         //* 指纹录入或删除操作
-        if(val == 1)
+        if (val == 1)
         {
             //* 指纹录入
 
@@ -545,7 +536,7 @@ void App_IO_FingerHandler(void)
 
             //* 录入
             Com_Status status = Int_FPM383_RegisterFinger(minID);
-            if(status == Com_OK)
+            if (status == Com_OK)
             {
                 //* 录入成功
                 sayWithoutInt();
@@ -604,5 +595,22 @@ void App_IO_OpenDoor(uint8_t openInfo[])
             sayWithoutInt();
             sayPasswordVerifyFail();
         }
+    }
+}
+
+void App_IO_DelAllUser(void)
+{
+    esp_err_t result = Dri_NVS_DelAll();
+    if (result == ESP_OK)
+    {
+        //* 删除成功
+        sayWithoutInt();
+        sayDelSucc();
+    }
+    else
+    {
+        //* 删除失败
+        sayWithoutInt();
+        sayDelFail();
     }
 }
