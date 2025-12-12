@@ -40,6 +40,9 @@ static void App_IO_UserInputPassword(void);
 //* 录入指纹
 static void App_IO_AddFinger(void);
 
+//* 删除指纹
+static void App_IO_DelFinger(void);
+
 //* 密码开门
 static void App_IO_OpenDoor(uint8_t openInfo[]);
 
@@ -157,8 +160,9 @@ void App_IO_Handler(uint8_t receive_buffers[])
         else if (receive_buffers[0] == '2' && receive_buffers[1] == '2')
         {
             //* 22 -- 删除指纹
+            App_IO_DelFinger();
         }
-        else if(receive_buffers[0] == '8' && receive_buffers[1] == '8')
+        else if (receive_buffers[0] == '8' && receive_buffers[1] == '8')
         {
             //* 88 -- 删除所有指纹
             App_IO_DelAllFinger();
@@ -515,6 +519,27 @@ void App_IO_AddFinger(void)
     }
 }
 
+void App_IO_DelFinger(void)
+{
+    //* 验证管理员身份
+    Com_Status status = App_IO_CheckAdmin();
+    if (status == Com_OK)
+    {
+        //* 验证成功
+        sayWithoutInt();
+        sayDelUserFingerprint();
+
+        //* 通知指纹任务
+        xTaskNotify(Finger_Task_Handle, (uint32_t)2, eSetValueWithOverwrite);
+    }
+    else
+    {
+        //* 验证失败,请重试
+        sayWithoutInt();
+        sayRetry();
+    }
+}
+
 //* 指纹处理
 void App_IO_FingerHandler(void)
 {
@@ -558,6 +583,35 @@ void App_IO_FingerHandler(void)
                 //* 录入失败
                 sayWithoutInt();
                 sayFingerprintAddFail();
+            }
+        }
+        else if (val == 2)
+        {
+            //* 删除指纹信息
+
+            //* 语音提示
+            sayWithoutInt();
+            sayPlaceFinger();
+
+            vTaskDelay(2000);
+
+            int8_t fingID = Int_FPM383_GetDelFingerID();
+            Com_Status status = Int_FPM383_DelFinger(fingID);
+            if (status = Com_OK)
+            {
+                //* 删除成功
+                sayWithoutInt();
+                sayDelUserFingerprint();
+                sayWithoutInt();
+                sayDelSucc();
+            }
+            else
+            {
+                //* 删除失败
+                sayWithoutInt();
+                sayDelUserFingerprint();
+                sayWithoutInt();
+                sayDelFail();
             }
         }
         esp_restart();
@@ -628,4 +682,27 @@ void App_IO_DelAllUser(void)
 
 void App_IO_DelAllFinger(void)
 {
+    //* 验证管理员身份
+    Com_Status admin_status = App_IO_CheckAdmin();
+    if (admin_status == Com_OK)
+    {
+        //* 验证成功,执行删除操作
+        Com_Status finger_status = Int_FPM383_DelAllFinger();
+        if (finger_status = Com_OK)
+        {
+            //* 删除成功
+            sayWithoutInt();
+            sayDelUserFingerprint();
+            sayWithoutInt();
+            sayDelSucc();
+        }
+        else
+        {
+            //* 删除失败
+            sayWithoutInt();
+            sayDelUserFingerprint();
+            sayWithoutInt();
+            sayDelFail();
+        }
+    }
 }
