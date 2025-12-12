@@ -46,6 +46,9 @@ static void App_IO_OpenDoor(uint8_t openInfo[]);
 //* 删除所有用户
 static void App_IO_DelAllUser(void);
 
+//* 删除所有指纹信息
+static void App_IO_DelAllFinger(void);
+
 //* 模块初始化
 void App_IO_Init(void)
 {
@@ -154,6 +157,11 @@ void App_IO_Handler(uint8_t receive_buffers[])
         else if (receive_buffers[0] == '2' && receive_buffers[1] == '2')
         {
             //* 22 -- 删除指纹
+        }
+        else if(receive_buffers[0] == '8' && receive_buffers[1] == '8')
+        {
+            //* 88 -- 删除所有指纹
+            App_IO_DelAllFinger();
         }
     }
     else
@@ -519,7 +527,7 @@ void App_IO_FingerHandler(void)
     //* 根据通知内容进行操作
     if (val != 0)
     {
-        //* 发送命令前需关闭中断
+        //* 添加指纹和删除需要将中断关闭,防止与指纹开门功能冲突
         gpio_intr_disable(FPM383_TOUCH_OUT);
 
         //* 指纹录入或删除操作
@@ -530,6 +538,9 @@ void App_IO_FingerHandler(void)
             //* 语音提示
             sayWithoutInt();
             sayPlaceFinger();
+
+            //* 留点时间给用户放手指
+            vTaskDelay(2000);
 
             //* 获取最小空闲页码
             uint16_t minID = Int_FPM383_GetMinID();
@@ -549,12 +560,12 @@ void App_IO_FingerHandler(void)
                 sayFingerprintAddFail();
             }
         }
+        esp_restart();
     }
     else
     {
         //* 指纹开门操作
     }
-    Int_FPM383_Sleep();
 }
 
 //* 密码开门
@@ -613,4 +624,8 @@ void App_IO_DelAllUser(void)
         sayWithoutInt();
         sayDelFail();
     }
+}
+
+void App_IO_DelAllFinger(void)
+{
 }
