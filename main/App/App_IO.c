@@ -597,7 +597,7 @@ void App_IO_FingerHandler(void)
 
             int8_t fingID = Int_FPM383_GetDelFingerID();
             Com_Status status = Int_FPM383_DelFinger(fingID);
-            if (status = Com_OK)
+            if (status == Com_OK)
             {
                 //* 删除成功
                 sayWithoutInt();
@@ -688,7 +688,7 @@ void App_IO_DelAllFinger(void)
     {
         //* 验证成功,执行删除操作
         Com_Status finger_status = Int_FPM383_DelAllFinger();
-        if (finger_status = Com_OK)
+        if (finger_status == Com_OK)
         {
             //* 删除成功
             sayWithoutInt();
