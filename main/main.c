@@ -20,7 +20,7 @@ void app_main(void)
 
     //* 创建任务
     xTaskCreate(sc12b_handle, "sc12b_handle", 4096, NULL, 4, &SC12B_Task_Handle);
-    xTaskCreate(finger_handle, "finger_handle", 4096, NULL, 4, &Finger_Task_Handle);
+    xTaskCreate(finger_handle, "finger_handle", 2048, NULL, 4, &Finger_Task_Handle);
 }
 
 void sc12b_handle(void *param)
