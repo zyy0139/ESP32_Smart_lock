@@ -42,7 +42,7 @@ esp_err_t Dri_NVS_GetStr(char *key, char *buffer, size_t *sizes)
 }
 
 //* NVS写入数字 -- 用于存储普通用户密码
-esp_err_t Dri_NVS_SetU8(char *key, uint8_t *value)
+esp_err_t Dri_NVS_SetU8(char *key, uint8_t value)
 {
     return nvs_set_u8(flash_handle, key, value);
 }
