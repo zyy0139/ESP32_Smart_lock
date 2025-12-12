@@ -3,6 +3,9 @@
 //* 引入指纹任务句柄
 extern TaskHandle_t Finger_Task_Handle;
 
+//* 引入手指按下标志位
+extern uint8_t finger_touch_down;
+
 //* 定义用户输入缓冲区
 uint8_t first_buffers[50];
 uint8_t second_buffers[50];
@@ -619,6 +622,32 @@ void App_IO_FingerHandler(void)
     else
     {
         //* 指纹开门操作
+
+        //* 验证指纹
+        if (finger_touch_down)
+        {
+            Com_Status status = Int_FPM383_VertyFinger();
+            if (status == Com_OK)
+            {
+                //* 验证成功,可以开门
+                sayWithoutInt();
+                sayDoorOpen();
+
+                //* 开门
+                Int_BDR6120_OpenDoor();
+
+                sayWithoutInt();
+                sayDoorClose();
+            }
+            else
+            {
+                //* 验证失败
+                sayWithoutInt();
+                sayVerifyFail();
+            }
+            finger_touch_down = 0;
+        }
+        esp_restart();
     }
 }
 
